@@ -1,0 +1,55 @@
+# Dependencies
+node_modules/
+admin/node_modules/
+
+# Build outputs
+build/
+dist/
+*.log
+*.tmp
+
+# Flutter
+yakro_actu/.dart_tool/
+yakro_actu/.flutter-plugins
+yakro_actu/.flutter-plugins-dependencies
+yakro_actu/.packages
+yakro_actu/build/
+yakro_actu/.gradle/
+yakro_actu/android/.gradle/
+yakro_actu/android/build/
+yakro_actu/android/app/build/
+yakro_actu/ios/Pods/
+yakro_actu/ios/.symlinks/
+yakro_actu/ios/Flutter/App.framework
+yakro_actu/ios/Flutter/Flutter.framework
+yakro_actu/ios/Flutter/Flutter.podspec
+yakro_actu/ios/ServiceDefinitions.json
+yakro_actu/ios/Runner/GeneratedPluginRegistrant.*
+yakro_actu/.idea/
+yakro_actu/*.iml
+yakro_actu/pubspec.lock
+
+# Environment variables
+.env
+admin/.env
+*.env.local
+*.env.production
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*

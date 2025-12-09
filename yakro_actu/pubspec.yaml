@@ -1,0 +1,43 @@
+name: yakro_actu
+version: 1.0.0+1
+description: Yakro Actu - Application d'actualités et de services
+
+publish_to: "none"
+
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.2
+  provider: ^6.0.5
+  firebase_core: ^2.24.2
+  firebase_auth: ^4.15.3
+  cloud_firestore: ^4.13.6
+  firebase_storage: ^11.5.6
+  firebase_messaging: ^14.7.10
+  cached_network_image: ^3.3.0
+  shimmer: ^2.0.0
+  google_sign_in: ^6.1.6
+  google_maps_flutter: ^2.5.0
+  shared_preferences: ^2.2.2
+  http: ^1.1.2
+  intl: ^0.20.2
+  flutter_localizations:
+    sdk: flutter
+  geolocator: ^10.0.1
+  url_launcher: ^6.2.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^2.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
+    - assets/icons/
+    - assets/videos/
+    - assets/audio/
