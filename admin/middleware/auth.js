@@ -1,40 +1,93 @@
 const jwt = require('jsonwebtoken');
-const User = require('../models/User');
+const prisma = require('../config/prisma');
 
-const auth = async (req, res, next) => {
+/**
+ * Middleware d'authentification JWT
+ */
+const authenticate = async (req, res, next) => {
   try {
-    const token = req.header('Authorization')?.replace('Bearer ', '');
-
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    
     if (!token) {
-      throw new Error();
+      return res.status(401).json({
+        success: false,
+        message: 'Token d\'authentification requis'
+      });
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findOne({ _id: decoded.userId });
+    
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.userId },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        role: true,
+        status: true,
+        avatar: true,
+        createdAt: true
+      }
+    });
 
     if (!user) {
-      throw new Error();
+      return res.status(401).json({
+        success: false,
+        message: 'Utilisateur non trouvé'
+      });
+    }
+
+    if (user.status !== 'ACTIVE') {
+      return res.status(403).json({
+        success: false,
+        message: 'Compte désactivé ou en attente'
+      });
     }
 
     req.user = user;
     next();
   } catch (error) {
-    res.status(401).json({ error: 'Please authenticate' });
+    if (error.name === 'JsonWebTokenError') {
+      return res.status(401).json({
+        success: false,
+        message: 'Token invalide'
+      });
+    }
+    if (error.name === 'TokenExpiredError') {
+      return res.status(401).json({
+        success: false,
+        message: 'Token expiré'
+      });
+    }
+    next(error);
   }
 };
 
-const admin = async (req, res, next) => {
-  try {
-    if (!req.user.isAdmin) {
-      return res.status(403).json({ error: 'Access denied' });
+/**
+ * Middleware d'autorisation par rôle
+ */
+const authorize = (roles = []) => {
+  return (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: 'Non authentifié'
+      });
     }
+
+    if (!roles.includes(req.user.role)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Accès refusé - Permissions insuffisantes'
+      });
+    }
+
     next();
-  } catch (error) {
-    res.status(403).json({ error: 'Access denied' });
-  }
+  };
 };
 
 module.exports = {
-  auth,
-  admin
+  authenticate,
+  authorize
 };

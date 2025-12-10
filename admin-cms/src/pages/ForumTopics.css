@@ -1,0 +1,152 @@
+.forum-topics-container {
+  padding: 24px;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.category-filter {
+  padding: 10px 16px;
+  border: 1px solid #ced4da;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.topics-list {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  overflow: hidden;
+}
+
+.topics-header {
+  display: grid;
+  grid-template-columns: 2fr 1fr 80px 80px 1fr 120px;
+  gap: 16px;
+  padding: 12px 20px;
+  background: #f8f9fa;
+  border-bottom: 2px solid #dee2e6;
+  font-weight: 600;
+  font-size: 14px;
+  color: #495057;
+}
+
+.topic-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr 80px 80px 1fr 120px;
+  gap: 16px;
+  padding: 16px 20px;
+  border-bottom: 1px solid #dee2e6;
+  align-items: center;
+  transition: background 0.2s;
+}
+
+.topic-row:hover {
+  background: #f8f9fa;
+}
+
+.topic-row.pinned {
+  background: #fff3cd;
+}
+
+.topic-row.pinned:hover {
+  background: #ffe8a1;
+}
+
+.topic-info {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.pin-icon,
+.lock-icon {
+  font-size: 16px;
+}
+
+.topic-info h4 {
+  margin: 0 0 4px 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.category-tag {
+  display: inline-block;
+  padding: 2px 8px;
+  background: #e9ecef;
+  border-radius: 3px;
+  font-size: 12px;
+  color: #495057;
+}
+
+.topic-author {
+  font-size: 14px;
+  color: #495057;
+}
+
+.topic-stats {
+  text-align: center;
+  font-size: 14px;
+  font-weight: 600;
+  color: #007bff;
+}
+
+.topic-last-post {
+  display: flex;
+  flex-direction: column;
+  font-size: 13px;
+  color: #495057;
+}
+
+.last-post-date {
+  font-size: 12px;
+  color: #6c757d;
+}
+
+.topic-actions {
+  display: flex;
+  gap: 4px;
+  justify-content: flex-end;
+}
+
+.btn-icon {
+  padding: 6px 10px;
+  border: 1px solid #dee2e6;
+  background: white;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.btn-icon:hover {
+  background: #f8f9fa;
+  border-color: #adb5bd;
+}
+
+.btn-icon.active {
+  background: #007bff;
+  border-color: #007bff;
+  filter: brightness(1.2);
+}
+
+.btn-delete {
+  border-color: #dc3545 !important;
+  color: #dc3545;
+}
+
+.btn-delete:hover {
+  background: #dc3545 !important;
+  color: white;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 60px;
+  color: #6c757d;
+}

@@ -1,0 +1,956 @@
+// Prisma Schema pour YakroActu - Backend API
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== ENUMS ====================
+
+enum UserRole {
+  ADMIN
+  JOURNALIST
+  USER
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  PENDING
+}
+
+enum ArticleStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum MediaType {
+  IMAGE
+  VIDEO
+  AUDIO
+  DOCUMENT
+}
+
+enum NotificationType {
+  INFO
+  WARNING
+  SUCCESS
+  ERROR
+}
+
+enum PriorityLevel {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum SurveyStatus {
+  DRAFT
+  ACTIVE
+  CLOSED
+}
+
+enum PageStatus {
+  DRAFT
+  PUBLISHED
+}
+
+enum StaffPermission {
+  READ
+  WRITE
+  DELETE
+  MANAGE_USERS
+  MANAGE_CONTENT
+  MANAGE_SETTINGS
+}
+
+enum AppPlatform {
+  ANDROID
+  IOS
+  WEB
+}
+
+enum AppVersionStatus {
+  ACTIVE
+  DEPRECATED
+  MAINTENANCE
+}
+
+enum BannerType {
+  HOME
+  ARTICLE
+  CATEGORY
+  POPUP
+}
+
+enum BannerPosition {
+  TOP
+  MIDDLE
+  BOTTOM
+  SIDEBAR
+}
+
+// ==================== MODELS ====================
+
+model User {
+  id        Int        @id @default(autoincrement())
+  email     String     @unique @db.VarChar(191)
+  password  String
+  firstName String     @db.VarChar(100)
+  lastName  String     @db.VarChar(100)
+  phone     String?    @db.VarChar(20)
+  avatar    String?    @db.VarChar(500)
+  role      UserRole   @default(USER)
+  status    UserStatus @default(ACTIVE)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  articles      Article[]
+  comments      Comment[]
+  favorites     Favorite[]
+  notifications Notification[]
+  reportagesAsAuthor      Reportage[] @relation("ReportageAuthor")
+  reportagesAsPhotographer Reportage[] @relation("ReportagePhotographer")
+  interviews    Interview[] @relation("InterviewAuthor")
+  announcements Announcement[] @relation("AnnouncementAuthor")
+  testimoniesModerated Testimony[] @relation("TestimonyModerator")
+  forumTopics   ForumTopic[] @relation("ForumTopicAuthor")
+  forumTopicsLastPost ForumTopic[] @relation("ForumTopicLastPost")
+  forumPosts    ForumPost[] @relation("ForumPostAuthor")
+
+  @@index([email])
+  @@index([role])
+  @@index([status])
+}
+
+model Category {
+  id          Int      @id @default(autoincrement())
+  name        String   @db.VarChar(100)
+  slug        String   @unique @db.VarChar(191)
+  description String?  @db.Text
+  icon        String?  @db.VarChar(100)
+  color       String?  @db.VarChar(50)
+  order       Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  articles       Article[]
+  subcategories  Subcategory[]
+  reportages     Reportage[]
+  interviews     Interview[]
+  testimonies    Testimony[]
+
+  @@index([slug])
+  @@index([isActive])
+}
+
+model Subcategory {
+  id          Int      @id @default(autoincrement())
+  name        String   @db.VarChar(100)
+  slug        String   @unique @db.VarChar(191)
+  description String?  @db.Text
+  icon        String?  @db.VarChar(100)
+  order       Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  categoryId Int
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@index([slug])
+  @@index([categoryId])
+  @@index([isActive])
+}
+
+model Tag {
+  id        Int      @id @default(autoincrement())
+  name      String   @db.VarChar(100)
+  slug      String   @unique @db.VarChar(191)
+  createdAt DateTime @default(now())
+
+  articles ArticleTag[]
+
+  @@index([slug])
+}
+
+model Article {
+  id          Int           @id @default(autoincrement())
+  title       String        @db.VarChar(500)
+  slug        String        @unique @db.VarChar(191)
+  content     String        @db.LongText
+  excerpt     String?       @db.Text
+  coverImage  String?       @db.VarChar(500)
+  status      ArticleStatus @default(DRAFT)
+  viewCount   Int           @default(0)
+  isPinned    Boolean       @default(false)
+  isBreaking  Boolean       @default(false)
+  publishedAt DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  categoryId Int
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  authorId Int
+  author   User @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  tags      ArticleTag[]
+  comments  Comment[]
+  favorites Favorite[]
+
+  @@index([slug])
+  @@index([status])
+  @@index([categoryId])
+  @@index([authorId])
+  @@index([publishedAt])
+}
+
+model ArticleTag {
+  articleId Int
+  article   Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  tagId Int
+  tag   Tag @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([articleId, tagId])
+  @@index([articleId])
+  @@index([tagId])
+}
+
+model Comment {
+  id        Int      @id @default(autoincrement())
+  content   String   @db.Text
+  status    String   @default("approved") @db.VarChar(20)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId Int
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  articleId Int
+  article   Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@index([articleId])
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model Favorite {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+
+  userId Int
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  articleId Int
+  article   Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, articleId])
+  @@index([userId])
+  @@index([articleId])
+}
+
+model Media {
+  id        Int       @id @default(autoincrement())
+  filename  String    @db.VarChar(255)
+  url       String    @db.VarChar(500)
+  type      MediaType
+  mimeType  String    @db.VarChar(100)
+  size      Int
+  createdAt DateTime  @default(now())
+
+  @@index([type])
+  @@index([createdAt])
+}
+
+model Pharmacy {
+  id           Int      @id @default(autoincrement())
+  name         String   @db.VarChar(200)
+  address      String   @db.VarChar(500)
+  commune      String?  @db.VarChar(100)
+  phone        String   @db.VarChar(20)
+  latitude     Float?
+  longitude    Float?
+  openingHours String?  @db.Text
+  isOnDuty     Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([isOnDuty])
+  @@index([commune])
+}
+
+model FlashInfo {
+  id        Int      @id @default(autoincrement())
+  title     String   @db.VarChar(200)
+  content   String   @db.Text
+  priority  String   @default("MEDIUM") @db.VarChar(20)
+  link      String?  @db.VarChar(500)
+  isActive  Boolean  @default(true)
+  expiresAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive])
+  @@index([priority])
+  @@index([expiresAt])
+}
+
+model Notification {
+  id        Int              @id @default(autoincrement())
+  title     String           @db.VarChar(200)
+  message   String           @db.Text
+  type      NotificationType @default(INFO)
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  userId Int
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isRead])
+  @@index([createdAt])
+}
+
+model Analytics {
+  id        String   @id @default(cuid())
+  event     String   @db.VarChar(100)
+  data      Json?
+  userAgent String?  @db.VarChar(500)
+  ipAddress String?  @db.VarChar(50)
+  createdAt DateTime @default(now())
+
+  @@index([event])
+  @@index([createdAt])
+}
+
+// Nouveaux modèles pour les fonctionnalités avancées
+
+model Author {
+  id          Int      @id @default(autoincrement())
+  userId      Int      @unique
+  bio         String?  @db.Text
+  website     String?  @db.VarChar(255)
+  twitter     String?  @db.VarChar(100)
+  facebook    String?  @db.VarChar(100)
+  linkedin    String?  @db.VarChar(100)
+  specialties String?  @db.Text
+  isVerified  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@index([isVerified])
+}
+
+model CommentFlag {
+  id          Int      @id @default(autoincrement())
+  commentId   Int
+  userId      Int
+  reason      String   @db.VarChar(255)
+  description String?  @db.Text
+  status      String   @default("PENDING") @db.VarChar(20)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([commentId])
+  @@index([userId])
+  @@index([status])
+}
+
+model Survey {
+  id          Int          @id @default(autoincrement())
+  title       String       @db.VarChar(255)
+  description String?      @db.Text
+  status      SurveyStatus @default(DRAFT)
+  startDate   DateTime?
+  endDate     DateTime?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  questions SurveyQuestion[]
+  responses SurveyResponse[]
+
+  @@index([status])
+  @@index([startDate])
+  @@index([endDate])
+}
+
+model SurveyQuestion {
+  id          Int      @id @default(autoincrement())
+  surveyId    Int
+  question    String   @db.VarChar(500)
+  type        String   @db.VarChar(50)
+  options     Json?
+  isRequired  Boolean  @default(false)
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  survey  Survey         @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  answers SurveyAnswer[]
+
+  @@index([surveyId])
+  @@index([order])
+}
+
+model SurveyResponse {
+  id        Int      @id @default(autoincrement())
+  surveyId  Int
+  userId    Int?
+  createdAt DateTime @default(now())
+
+  survey  Survey         @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  answers SurveyAnswer[]
+
+  @@index([surveyId])
+  @@index([userId])
+}
+
+model SurveyAnswer {
+  id         Int    @id @default(autoincrement())
+  responseId Int
+  questionId Int
+  answer     String @db.Text
+
+  response SurveyResponse @relation(fields: [responseId], references: [id], onDelete: Cascade)
+  question SurveyQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@index([responseId])
+  @@index([questionId])
+}
+
+model Page {
+  id          Int        @id @default(autoincrement())
+  title       String     @db.VarChar(255)
+  slug        String     @unique @db.VarChar(191)
+  content     String     @db.LongText
+  status      PageStatus @default(DRAFT)
+  metaTitle   String?    @db.VarChar(255)
+  metaDesc    String?    @db.Text
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([slug])
+  @@index([status])
+}
+
+model FeaturedSection {
+  id          Int      @id @default(autoincrement())
+  title       String   @db.VarChar(255)
+  description String?  @db.Text
+  articleIds  Json
+  order       Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([isActive])
+  @@index([order])
+}
+
+model AdSpace {
+  id          Int      @id @default(autoincrement())
+  name        String   @db.VarChar(255)
+  location    String   @db.VarChar(100)
+  imageUrl    String?  @db.VarChar(500)
+  link        String?  @db.VarChar(500)
+  width       Int?
+  height      Int?
+  isActive    Boolean  @default(true)
+  startDate   DateTime?
+  endDate     DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([location])
+  @@index([isActive])
+}
+
+model BreakingNews {
+  id          Int      @id @default(autoincrement())
+  title       String   @db.VarChar(500)
+  content     String   @db.Text
+  priority    PriorityLevel @default(MEDIUM)
+  link        String?  @db.VarChar(500)
+  isActive    Boolean  @default(true)
+  expiresAt   DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([isActive])
+  @@index([priority])
+  @@index([expiresAt])
+}
+
+model LiveStreaming {
+  id          Int      @id @default(autoincrement())
+  title       String   @db.VarChar(255)
+  description String?  @db.Text
+  streamUrl   String   @db.VarChar(500)
+  thumbnailUrl String? @db.VarChar(500)
+  isLive      Boolean  @default(false)
+  viewCount   Int      @default(0)
+  startTime   DateTime?
+  endTime     DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([isLive])
+  @@index([startTime])
+}
+
+model RssFeed {
+  id          Int      @id @default(autoincrement())
+  name        String   @db.VarChar(255)
+  url         String   @db.VarChar(500)
+  categoryId  Int?
+  isActive    Boolean  @default(true)
+  lastFetched DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([isActive])
+}
+
+model Role {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique @db.VarChar(100)
+  description String?  @db.Text
+  permissions Json
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  staff StaffMember[]
+
+  @@index([name])
+}
+
+model StaffMember {
+  id          Int      @id @default(autoincrement())
+  userId      Int      @unique
+  roleId      Int
+  department  String?  @db.VarChar(100)
+  position    String?  @db.VarChar(100)
+  hireDate    DateTime?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  role Role @relation(fields: [roleId], references: [id])
+
+  @@index([userId])
+  @@index([roleId])
+  @@index([isActive])
+}
+
+model SystemSetting {
+  id        Int      @id @default(autoincrement())
+  key       String   @unique @db.VarChar(100)
+  value     String   @db.Text
+  type      String   @db.VarChar(50)
+  category  String?  @db.VarChar(100)
+  updatedAt DateTime @updatedAt
+
+  @@index([key])
+  @@index([category])
+}
+
+// ==================== GESTION APP MOBILE & WEB ====================
+
+model AppVersion {
+  id           Int              @id @default(autoincrement())
+  platform     AppPlatform
+  version      String           @db.VarChar(20)
+  buildNumber  Int
+  status       AppVersionStatus @default(ACTIVE)
+  releaseNotes String?          @db.Text
+  minVersion   String?          @db.VarChar(20)
+  forceUpdate  Boolean          @default(false)
+  downloadUrl  String?          @db.VarChar(500)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  @@unique([platform, version])
+  @@index([platform])
+  @@index([status])
+}
+
+model AppConfig {
+  id           Int      @id @default(autoincrement())
+  platform     AppPlatform
+  configKey    String   @db.VarChar(100)
+  configValue  String   @db.Text
+  description  String?  @db.Text
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([platform, configKey])
+  @@index([platform])
+  @@index([isActive])
+}
+
+model Banner {
+  id           Int            @id @default(autoincrement())
+  title        String         @db.VarChar(255)
+  description  String?        @db.Text
+  imageUrl     String         @db.VarChar(500)
+  type         BannerType
+  position     BannerPosition @default(TOP)
+  link         String?        @db.VarChar(500)
+  targetId     Int?
+  order        Int            @default(0)
+  isActive     Boolean        @default(true)
+  startDate    DateTime?
+  endDate      DateTime?
+  clickCount   Int            @default(0)
+  viewCount    Int            @default(0)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  @@index([type])
+  @@index([isActive])
+  @@index([position])
+}
+
+model PushNotification {
+  id           Int              @id @default(autoincrement())
+  title        String           @db.VarChar(255)
+  message      String           @db.Text
+  imageUrl     String?          @db.VarChar(500)
+  type         NotificationType @default(INFO)
+  link         String?          @db.VarChar(500)
+  targetId     Int?
+  platform     AppPlatform?
+  userIds      Json?
+  sentCount    Int              @default(0)
+  openedCount  Int              @default(0)
+  scheduledAt  DateTime?
+  sentAt       DateTime?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  @@index([type])
+  @@index([scheduledAt])
+  @@index([sentAt])
+}
+
+model WebsiteMenu {
+  id          Int      @id @default(autoincrement())
+  name        String   @db.VarChar(100)
+  slug        String   @unique @db.VarChar(191)
+  parentId    Int?
+  link        String?  @db.VarChar(500)
+  icon        String?  @db.VarChar(100)
+  order       Int      @default(0)
+  isActive    Boolean  @default(true)
+  isExternal  Boolean  @default(false)
+  target      String?  @db.VarChar(20)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([parentId])
+  @@index([isActive])
+  @@index([order])
+}
+
+model WebsiteTheme {
+  id              Int      @id @default(autoincrement())
+  name            String   @db.VarChar(100)
+  primaryColor    String   @db.VarChar(50)
+  secondaryColor  String   @db.VarChar(50)
+  accentColor     String?  @db.VarChar(50)
+  backgroundColor String?  @db.VarChar(50)
+  textColor       String?  @db.VarChar(50)
+  fontFamily      String?  @db.VarChar(100)
+  logoUrl         String?  @db.VarChar(500)
+  faviconUrl      String?  @db.VarChar(500)
+  customCss       String?  @db.LongText
+  isActive        Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([isActive])
+}
+
+model SocialMedia {
+  id        Int      @id @default(autoincrement())
+  platform  String   @db.VarChar(50)
+  name      String   @db.VarChar(100)
+  url       String   @db.VarChar(500)
+  icon      String?  @db.VarChar(100)
+  order     Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([platform])
+  @@index([isActive])
+  @@index([order])
+}
+
+model ContactMessage {
+  id        Int      @id @default(autoincrement())
+  name      String   @db.VarChar(100)
+  email     String   @db.VarChar(191)
+  subject   String   @db.VarChar(255)
+  message   String   @db.Text
+  phone     String?  @db.VarChar(20)
+  isRead    Boolean  @default(false)
+  repliedAt DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([email])
+  @@index([isRead])
+  @@index([createdAt])
+}
+
+model Newsletter {
+  id            Int      @id @default(autoincrement())
+  email         String   @unique @db.VarChar(191)
+  name          String?  @db.VarChar(100)
+  isActive      Boolean  @default(true)
+  isVerified    Boolean  @default(false)
+  verifiedAt    DateTime?
+  unsubscribedAt DateTime?
+  createdAt     DateTime @default(now())
+
+  @@index([email])
+  @@index([isActive])
+  @@index([isVerified])
+}
+
+model AppAnalytics {
+  id           String      @id @default(cuid())
+  platform     AppPlatform
+  event        String      @db.VarChar(100)
+  screen       String?     @db.VarChar(100)
+  userId       Int?
+  sessionId    String?     @db.VarChar(100)
+  data         Json?
+  deviceInfo   Json?
+  createdAt    DateTime    @default(now())
+
+  @@index([platform])
+  @@index([event])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+// ==================== SPORT MODULE ====================
+
+model SportConfig {
+  id          Int      @id @default(autoincrement())
+  apiProvider String   @db.VarChar(100) // "API-Football", "RapidAPI", etc.
+  apiKey      String   @db.VarChar(500)
+  apiUrl      String   @db.VarChar(500)
+  isActive    Boolean  @default(true)
+  config      Json? // Configuration spécifique (endpoints, options)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([isActive])
+}
+
+// ==================== CONTENT MODULES ====================
+
+model Reportage {
+  id             Int           @id @default(autoincrement())
+  title          String        @db.VarChar(255)
+  slug           String        @unique @db.VarChar(191)
+  summary       String?       @db.Text
+  content       String        @db.LongText
+  coverImage    String?       @db.VarChar(500)
+  authorId      Int?
+  photographerId Int?
+  categoryId    Int?
+  status        ArticleStatus @default(DRAFT)
+  isPublished   Boolean       @default(false)
+  publishedAt   DateTime?
+  viewCount     Int           @default(0)
+  images        Json? // Array of image objects [{url, caption, order}]
+  videos        Json? // Array of video URLs
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  author       User?     @relation("ReportageAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+  photographer User?     @relation("ReportagePhotographer", fields: [photographerId], references: [id], onDelete: SetNull)
+  category     Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  @@index([slug])
+  @@index([authorId])
+  @@index([categoryId])
+  @@index([status])
+  @@index([isPublished])
+  @@index([publishedAt])
+}
+
+model Interview {
+  id                Int           @id @default(autoincrement())
+  title             String        @db.VarChar(255)
+  slug              String        @unique @db.VarChar(191)
+  intervieweeName String        @db.VarChar(100)
+  intervieweeRole String?       @db.VarChar(150)
+  intervieweePhoto String?      @db.VarChar(500)
+  introduction    String?       @db.Text
+  questions       Json // Array of Q&A [{question, answer, order}]
+  highlightQuote  String?       @db.Text
+  authorId        Int?
+  categoryId      Int?
+  coverImage      String?       @db.VarChar(500)
+  audioUrl        String?       @db.VarChar(500)
+  videoUrl        String?       @db.VarChar(500)
+  status          ArticleStatus @default(DRAFT)
+  isPublished     Boolean       @default(false)
+  publishedAt     DateTime?
+  viewCount       Int           @default(0)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  author   User?     @relation("InterviewAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+  category Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  @@index([slug])
+  @@index([authorId])
+  @@index([categoryId])
+  @@index([status])
+  @@index([isPublished])
+  @@index([publishedAt])
+}
+
+model Announcement {
+  id          Int           @id @default(autoincrement())
+  title       String        @db.VarChar(255)
+  slug        String        @unique @db.VarChar(191)
+  content     String        @db.LongText
+  type        String        @db.VarChar(50) // "OFFICIAL", "PRESS_RELEASE", "NOTICE"
+  priority    PriorityLevel @default(MEDIUM)
+  authorId    Int?
+  attachments Json? // Array of file objects [{name, url, type, size}]
+  isPublished Boolean       @default(false)
+  publishedAt DateTime?
+  expiresAt   DateTime?
+  viewCount   Int           @default(0)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  author User? @relation("AnnouncementAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+
+  @@index([slug])
+  @@index([type])
+  @@index([priority])
+  @@index([isPublished])
+  @@index([publishedAt])
+}
+
+model Testimony {
+  id          Int      @id @default(autoincrement())
+  title       String   @db.VarChar(255)
+  content     String   @db.Text
+  authorName  String   @db.VarChar(100)
+  authorPhoto String?  @db.VarChar(500)
+  authorRole  String?  @db.VarChar(100)
+  location    String?  @db.VarChar(150)
+  rating      Int?     @default(5) // 1-5 stars
+  categoryId  Int?
+  isApproved  Boolean  @default(false)
+  approvedAt  DateTime?
+  approvedBy  Int?
+  isPublished Boolean  @default(false)
+  publishedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  category Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  moderator User?    @relation("TestimonyModerator", fields: [approvedBy], references: [id], onDelete: SetNull)
+
+  @@index([categoryId])
+  @@index([isApproved])
+  @@index([isPublished])
+  @@index([publishedAt])
+}
+
+// ==================== SURVEY ENHANCEMENT ====================
+// Note: SurveyQuestion model is already defined earlier in the schema
+
+// ==================== FORUM MODULE ====================
+
+model ForumCategory {
+  id          Int      @id @default(autoincrement())
+  name        String   @db.VarChar(100)
+  slug        String   @unique @db.VarChar(100)
+  description String?  @db.Text
+  icon        String?  @db.VarChar(50)
+  order       Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  topics ForumTopic[]
+
+  @@index([isActive])
+  @@index([order])
+}
+
+model ForumTopic {
+  id          Int      @id @default(autoincrement())
+  categoryId  Int
+  title       String   @db.VarChar(255)
+  slug        String   @unique @db.VarChar(191)
+  userId      Int
+  isPinned    Boolean  @default(false)
+  isLocked    Boolean  @default(false)
+  viewCount   Int      @default(0)
+  postCount   Int      @default(0)
+  lastPostAt  DateTime?
+  lastPostBy  Int?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  category     ForumCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  user         User          @relation("ForumTopicAuthor", fields: [userId], references: [id], onDelete: Cascade)
+  lastPoster   User?         @relation("ForumTopicLastPost", fields: [lastPostBy], references: [id], onDelete: SetNull)
+  posts        ForumPost[]
+
+  @@index([categoryId])
+  @@index([userId])
+  @@index([isPinned])
+  @@index([createdAt])
+  @@index([lastPostAt])
+}
+
+model ForumPost {
+  id            Int      @id @default(autoincrement())
+  topicId       Int
+  userId        Int
+  content       String   @db.Text
+  parentId      Int? // For nested replies
+  isApproved    Boolean  @default(true)
+  isEdited      Boolean  @default(false)
+  editedAt      DateTime?
+  upvotes       Int      @default(0)
+  downvotes     Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  topic  ForumTopic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  user   User       @relation("ForumPostAuthor", fields: [userId], references: [id], onDelete: Cascade)
+  parent ForumPost? @relation("ForumPostReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies ForumPost[] @relation("ForumPostReplies")
+
+  @@index([topicId])
+  @@index([userId])
+  @@index([parentId])
+  @@index([createdAt])
+  @@index([isApproved])
+}
