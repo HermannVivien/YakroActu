@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:math';
 
@@ -121,7 +122,7 @@ class RecommendationService {
   Future<List<Map<String, dynamic>>> getViewHistory() async {
     final prefs = await SharedPreferences.getInstance();
     final history = prefs.getStringList(_viewHistoryKey) ?? [];
-    return history.map((item) => jsonDecode(item)).toList();
+    return history.map((item) => jsonDecode(item) as Map<String, dynamic>).toList();
   }
 
   // Sauvegarder l'historique d'interaction

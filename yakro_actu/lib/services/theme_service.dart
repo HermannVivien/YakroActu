@@ -10,6 +10,7 @@ class ThemeService with ChangeNotifier {
 
   ThemeMode get themeMode => _themeMode;
   Color get accentColor => _accentColor;
+  bool get isDarkMode => _themeMode == ThemeMode.dark;
 
   Future<void> init() async {
     final prefs = await SharedPreferences.getInstance();
@@ -79,7 +80,7 @@ class ThemeService with ChangeNotifier {
       scaffoldBackgroundColor: _themeMode == ThemeMode.dark 
           ? const Color(0xFF121212) 
           : const Color(0xFFF5F5F5),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: _themeMode == ThemeMode.dark 
             ? const Color(0xFF212121) 
             : Colors.white,

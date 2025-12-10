@@ -4,7 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shimmer/shimmer.dart';
 
-import '../../widgets/search/search_bar.dart';
+import '../../widgets/search/search_bar.dart' as custom_search;
 
 class MediaScreen extends StatefulWidget {
   const MediaScreen({super.key});
@@ -29,7 +29,7 @@ class _MediaScreenState extends State<MediaScreen> {
         slivers: [
           // Barre de recherche
           SliverToBoxAdapter(
-            child: SearchBar(
+            child: custom_search.SearchBar(
               onSearch: (query) {
                 // TODO: Implémenter la recherche dans les médias
               },

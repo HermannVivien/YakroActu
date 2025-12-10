@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 
-import '../widgets/custom_scaffold.dart';
-import '../widgets/custom_app_bar.dart';
-import '../widgets/chat_message.dart';
+import '../widgets/custom_app_bar.dart' as app_bar;
+import '../widgets/chat_message.dart' as chat_msg;
 
 import '../services/theme_service.dart';
 
@@ -150,8 +149,8 @@ class _ChatScreenState extends State<ChatScreen> {
   Widget build(BuildContext context) {
     final theme = Provider.of<ThemeService>(context);
 
-    return CustomScaffold(
-      appBar: CustomAppBar(
+    return Scaffold(
+      appBar: app_bar.CustomAppBar(
         title: widget.otherUserName,
         actions: [
           IconButton(
@@ -177,10 +176,10 @@ class _ChatScreenState extends State<ChatScreen> {
               itemCount: _messages.length,
               itemBuilder: (context, index) {
                 final message = _messages[index];
-                return ChatMessage(
+                return chat_msg.ChatMessage(
                   message: message['message'],
+                  sender: message['sender'] ?? 'Inconnu',
                   isMe: message['isMe'] ?? false,
-                  imageUrl: message['imageUrl'],
                   timestamp: DateTime.parse(message['timestamp']),
                 );
               },

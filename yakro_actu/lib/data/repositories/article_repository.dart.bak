@@ -1,0 +1,228 @@
+import 'package:flutter/foundation.dart';
+import '../../models/article.dart';
+import '../../models/comment.dart';
+import '../../services/api/article_api.dart';
+
+class ArticleRepository extends ChangeNotifier {
+  final ArticleApi _articleApi = ArticleApi();
+
+  List<Article> _articles = [];
+  List<Article> _trendingArticles = [];
+  List<Article> _breakingNews = [];
+  Article? _selectedArticle;
+  List<Comment> _comments = [];
+  
+  bool _isLoading = false;
+  bool _hasMore = true;
+  int _currentPage = 1;
+  String? _error;
+
+  List<Article> get articles => _articles;
+  List<Article> get trendingArticles => _trendingArticles;
+  List<Article> get breakingNews => _breakingNews;
+  Article? get selectedArticle => _selectedArticle;
+  List<Comment> get comments => _comments;
+  bool get isLoading => _isLoading;
+  bool get hasMore => _hasMore;
+  String? get error => _error;
+
+  /// Charger les articles
+  Future<void> loadArticles({
+    int? categoryId,
+    String? status,
+    bool refresh = false,
+  }) async {
+    if (_isLoading) return;
+    if (refresh) {
+      _currentPage = 1;
+      _hasMore = true;
+      _articles = [];
+    }
+
+    _setLoading(true);
+    _error = null;
+
+    try {
+      final response = await _articleApi.getArticles(
+        page: _currentPage,
+        limit: 20,
+        categoryId: categoryId,
+        status: status,
+      );
+
+      final newArticles = response['articles'] as List<Article>;
+      if (refresh) {
+        _articles = newArticles;
+      } else {
+        _articles.addAll(newArticles);
+      }
+
+      final pagination = response['pagination'];
+      _hasMore = _currentPage < pagination['pages'];
+      _currentPage++;
+
+      _setLoading(false);
+      notifyListeners();
+    } catch (e) {
+      _error = e.toString();
+      _setLoading(false);
+      notifyListeners();
+    }
+  }
+
+  /// Charger un article par ID
+  Future<void> loadArticleById(int id) async {
+    _setLoading(true);
+    _error = null;
+
+    try {
+      _selectedArticle = await _articleApi.getArticleById(id);
+      _setLoading(false);
+      notifyListeners();
+    } catch (e) {
+      _error = e.toString();
+      _selectedArticle = null;
+      _setLoading(false);
+      notifyListeners();
+    }
+  }
+
+  /// Charger les articles tendance
+  Future<void> loadTrendingArticles() async {
+    try {
+      _trendingArticles = await _articleApi.getTrendingArticles();
+      notifyListeners();
+    } catch (e) {
+      print('Error loading trending articles: $e');
+    }
+  }
+
+  /// Charger les breaking news
+  Future<void> loadBreakingNews() async {
+    try {
+      _breakingNews = await _articleApi.getBreakingNews();
+      notifyListeners();
+    } catch (e) {
+      print('Error loading breaking news: $e');
+    }
+  }
+
+  /// Rechercher des articles
+  Future<List<Article>> searchArticles(String query) async {
+    try {
+      return await _articleApi.searchArticles(query);
+    } catch (e) {
+      print('Error searching articles: $e');
+      return [];
+    }
+  }
+
+  /// Charger les commentaires d'un article
+  Future<void> loadComments(int articleId, {int page = 1}) async {
+    try {
+      final response = await _articleApi.getArticleComments(articleId, page: page);
+      if (page == 1) {
+        _comments = response['comments'];
+      } else {
+        _comments.addAll(response['comments']);
+      }
+      notifyListeners();
+    } catch (e) {
+      print('Error loading comments: $e');
+    }
+  }
+
+  /// Ajouter un commentaire
+  Future<bool> addComment(int articleId, String content) async {
+    try {
+      final comment = await _articleApi.addComment(articleId, content);
+      _comments.insert(0, comment);
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+      return false;
+    }
+  }
+
+  /// Créer un article (admin/journaliste)
+  Future<bool> createArticle(Map<String, dynamic> data) async {
+    _setLoading(true);
+    _error = null;
+
+    try {
+      final article = await _articleApi.createArticle(data);
+      _articles.insert(0, article);
+      _setLoading(false);
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _error = e.toString();
+      _setLoading(false);
+      notifyListeners();
+      return false;
+    }
+  }
+
+  /// Mettre à jour un article
+  Future<bool> updateArticle(int id, Map<String, dynamic> data) async {
+    _setLoading(true);
+    _error = null;
+
+    try {
+      final article = await _articleApi.updateArticle(id, data);
+      final index = _articles.indexWhere((a) => a.id == id);
+      if (index != -1) {
+        _articles[index] = article;
+      }
+      if (_selectedArticle?.id == id) {
+        _selectedArticle = article;
+      }
+      _setLoading(false);
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _error = e.toString();
+      _setLoading(false);
+      notifyListeners();
+      return false;
+    }
+  }
+
+  /// Supprimer un article
+  Future<bool> deleteArticle(int id) async {
+    _setLoading(true);
+    _error = null;
+
+    try {
+      await _articleApi.deleteArticle(id);
+      _articles.removeWhere((a) => a.id == id);
+      if (_selectedArticle?.id == id) {
+        _selectedArticle = null;
+      }
+      _setLoading(false);
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _error = e.toString();
+      _setLoading(false);
+      notifyListeners();
+      return false;
+    }
+  }
+
+  void _setLoading(bool value) {
+    _isLoading = value;
+  }
+
+  void clearError() {
+    _error = null;
+    notifyListeners();
+  }
+
+  void clearSelectedArticle() {
+    _selectedArticle = null;
+    notifyListeners();
+  }
+}

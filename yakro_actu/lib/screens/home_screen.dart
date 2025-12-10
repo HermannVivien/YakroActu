@@ -3,11 +3,6 @@ import 'package:provider/provider.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../widgets/custom_scaffold.dart';
-import '../widgets/custom_app_bar.dart';
-import '../widgets/custom_bottom_nav.dart';
-import '../widgets/content_card.dart';
-import '../widgets/search_bar.dart';
-import '../widgets/notification_card.dart';
 import '../widgets/chat_message.dart';
 
 import '../services/theme_service.dart';

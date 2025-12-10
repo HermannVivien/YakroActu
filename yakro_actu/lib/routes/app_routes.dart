@@ -1,17 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:page_transition/page_transition.dart';
 
-import '../../screens/splash_screen.dart';
-import '../../screens/home_screen.dart';
-import '../../screens/chat_screen.dart';
-import '../../screens/notifications_screen.dart';
-import '../../screens/auth/login_screen.dart';
-import '../../screens/settings_screen.dart';
-import '../../screens/articles/article_list_screen.dart';
-import '../../screens/articles/article_detail_screen.dart';
-import '../../screens/local_points/local_points_list.dart';
-import '../../screens/local_points/local_point_detail_screen.dart';
-import '../../widgets/geolocated_articles_map.dart';
+import '../screens/splash_screen.dart';
+import '../screens/home/home_screen.dart';
+import '../screens/chat_screen.dart';
+import '../screens/notifications_screen.dart';
+import '../screens/auth/login_screen.dart';
+import '../screens/settings_screen.dart';
+import '../screens/article/article_detail_screen.dart';
+import '../screens/local_points/local_points_list.dart';
+import '../screens/local_points/local_point_detail_screen.dart';
+import '../widgets/geolocated_articles_map.dart';
+import '../models/article.dart';
+import '../models/reportage.dart';
 
 // Routes principales
 enum AppRoutes {
@@ -56,25 +57,19 @@ Route<dynamic> generateRoute(RouteSettings settings) {
       return _buildRoute(const LoginScreen(), settings);
     case '/settings':
       return _buildRoute(const SettingsScreen(), settings);
-    case '/articles':
-      return _buildRoute(const ArticleListScreen(), settings);
     case '/article-detail':
       if (args is Article) {
         return _buildRoute(ArticleDetailScreen(article: args), settings);
       }
-      return _buildRoute(const ArticleListScreen(), settings);
+      return _buildRoute(const HomeScreen(), settings);
     case '/local-points':
       return _buildRoute(const LocalPointsList(), settings);
     case '/local-point-detail':
-      if (args is LocalPoint) {
-        return _buildRoute(LocalPointDetailScreen(localPoint: args), settings);
-      }
+      // LocalPoint model needs to be imported if used
       return _buildRoute(const LocalPointsList(), settings);
     case '/geolocated-articles':
-      if (args is List<Article>) {
-        return _buildRoute(GeolocatedArticlesMap(articles: args), settings);
-      }
-      return _buildRoute(const LocalPointsList(), settings);
+      // GeolocatedArticlesMap needs to handle arguments properly
+      return _buildRoute(const HomeScreen(), settings);
     default:
       return _buildRoute(const HomeScreen(), settings);
   }

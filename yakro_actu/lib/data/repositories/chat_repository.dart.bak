@@ -1,0 +1,228 @@
+import 'package:flutter/foundation.dart';
+import '../../models/chat.dart';
+import '../../models/chat_message.dart';
+import '../../services/api/chat_api.dart';
+import '../../services/socket_service.dart';
+
+class ChatRepository extends ChangeNotifier {
+  final ChatApi _chatApi = ChatApi();
+  final SocketService _socketService = SocketService();
+
+  List<Chat> _chats = [];
+  Chat? _selectedChat;
+  List<ChatMessage> _messages = [];
+  Map<int, bool> _typingUsers = {};
+  
+  bool _isLoading = false;
+  String? _error;
+
+  List<Chat> get chats => _chats;
+  Chat? get selectedChat => _selectedChat;
+  List<ChatMessage> get messages => _messages;
+  bool get isLoading => _isLoading;
+  String? get error => _error;
+  
+  bool isUserTyping(int chatId) => _typingUsers[chatId] ?? false;
+
+  ChatRepository() {
+    _setupSocketListeners();
+  }
+
+  void _setupSocketListeners() {
+    _socketService.onMessageReceived = (message) {
+      // Ajouter le message à la liste
+      if (_selectedChat?.id == message.chatId) {
+        _messages.add(message);
+        notifyListeners();
+      }
+
+      // Mettre à jour le dernier message du chat
+      final chatIndex = _chats.indexWhere((c) => c.id == message.chatId);
+      if (chatIndex != -1) {
+        _chats[chatIndex].lastMessage = message.content;
+        _chats[chatIndex].updatedAt = message.createdAt;
+        // Trier par date de mise à jour
+        _chats.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+        notifyListeners();
+      }
+    };
+
+    _socketService.onUserTyping = (chatId, user) {
+      if (_selectedChat?.id == chatId) {
+        _typingUsers[chatId] = true;
+        notifyListeners();
+      }
+    };
+
+    _socketService.onUserStopTyping = (chatId, userId) {
+      _typingUsers[chatId] = false;
+      notifyListeners();
+    };
+
+    _socketService.onMessagesRead = (chatId, userId) {
+      if (_selectedChat?.id == chatId) {
+        // Marquer les messages comme lus
+        for (var message in _messages) {
+          if (message.senderId != userId) {
+            message.isRead = true;
+          }
+        }
+        notifyListeners();
+      }
+    };
+  }
+
+  /// Charger les conversations
+  Future<void> loadChats({int page = 1}) async {
+    if (page == 1) {
+      _setLoading(true);
+    }
+    _error = null;
+
+    try {
+      final response = await _chatApi.getMyChats(page: page);
+      if (page == 1) {
+        _chats = response['chats'];
+      } else {
+        _chats.addAll(response['chats']);
+      }
+      _setLoading(false);
+      notifyListeners();
+    } catch (e) {
+      _error = e.toString();
+      _setLoading(false);
+      notifyListeners();
+    }
+  }
+
+  /// Charger une conversation
+  Future<void> loadChat(int chatId) async {
+    _setLoading(true);
+    _error = null;
+
+    try {
+      _selectedChat = await _chatApi.getChatById(chatId);
+      _messages = _selectedChat!.messages ?? [];
+      
+      // Rejoindre la room WebSocket
+      _socketService.joinChat(chatId);
+      
+      // Marquer comme lu
+      _socketService.markMessagesAsRead(chatId);
+      
+      _setLoading(false);
+      notifyListeners();
+    } catch (e) {
+      _error = e.toString();
+      _setLoading(false);
+      notifyListeners();
+    }
+  }
+
+  /// Créer une conversation
+  Future<bool> createChat({
+    required List<int> participantIds,
+    String? name,
+    String type = 'PRIVATE',
+  }) async {
+    _setLoading(true);
+    _error = null;
+
+    try {
+      final chat = await _chatApi.createChat(
+        participantIds: participantIds,
+        name: name,
+        type: type,
+      );
+      _chats.insert(0, chat);
+      _setLoading(false);
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _error = e.toString();
+      _setLoading(false);
+      notifyListeners();
+      return false;
+    }
+  }
+
+  /// Charger plus de messages
+  Future<void> loadMoreMessages(int chatId, int page) async {
+    try {
+      final response = await _chatApi.getChatMessages(chatId, page: page);
+      final newMessages = response['messages'] as List<ChatMessage>;
+      _messages.insertAll(0, newMessages.reversed);
+      notifyListeners();
+    } catch (e) {
+      print('Error loading more messages: $e');
+    }
+  }
+
+  /// Envoyer un message via WebSocket
+  void sendMessage({
+    required int chatId,
+    required String content,
+    String type = 'text',
+  }) {
+    _socketService.sendMessage(
+      chatId: chatId,
+      content: content,
+      type: type,
+    );
+  }
+
+  /// Envoyer un message via API (fallback)
+  Future<bool> sendMessageViaApi(int chatId, String content, {String type = 'text'}) async {
+    try {
+      final message = await _chatApi.sendMessage(chatId, content, type: type);
+      _messages.add(message);
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+      return false;
+    }
+  }
+
+  /// Notifier que l'utilisateur écrit
+  void startTyping(int chatId) {
+    _socketService.startTyping(chatId);
+  }
+
+  /// Notifier que l'utilisateur arrête d'écrire
+  void stopTyping(int chatId) {
+    _socketService.stopTyping(chatId);
+  }
+
+  /// Marquer les messages comme lus
+  Future<void> markAsRead(int chatId) async {
+    try {
+      await _chatApi.markMessagesAsRead(chatId);
+      _socketService.markMessagesAsRead(chatId);
+    } catch (e) {
+      print('Error marking as read: $e');
+    }
+  }
+
+  void _setLoading(bool value) {
+    _isLoading = value;
+  }
+
+  void clearError() {
+    _error = null;
+    notifyListeners();
+  }
+
+  void clearSelectedChat() {
+    _selectedChat = null;
+    _messages = [];
+    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _socketService.disconnect();
+    super.dispose();
+  }
+}
